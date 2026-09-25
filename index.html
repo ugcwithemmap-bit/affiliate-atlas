@@ -225,7 +225,7 @@ body.locked > :not(.gate){visibility:hidden}
 
 <script>
 document.body.classList.add("locked");
-const SALT=new Uint8Array([117,59,38,26,44,147,105,22,163,114,97,171,129,218,43,244]);
+const SALT=new Uint8Array([150,82,105,202,71,98,132,108,100,26,117,186,74,30,193,169]);
 async function derive(code){const km=await crypto.subtle.importKey("raw",new TextEncoder().encode(code),"PBKDF2",false,["deriveKey"]);return crypto.subtle.deriveKey({name:"PBKDF2",salt:SALT,iterations:300000,hash:"SHA-256"},km,{name:"AES-GCM",length:256},true,["decrypt"]);}
 async function dec(k,buf){const u=new Uint8Array(buf);const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:u.slice(0,12)},k,u.slice(12));const ds=new Blob([pt]).stream().pipeThrough(new DecompressionStream("gzip"));return await new Response(ds).text();}
 async function open(k){const btn=document.getElementById("go");btn.textContent="Opening…";const [d,a]=await Promise.all([fetch("data.enc").then(r=>r.arrayBuffer()),fetch("avatars.enc").then(r=>r.arrayBuffer())]);let data;try{data=await dec(k,d);}catch(e){throw new Error("bad code");}window.__DATA=JSON.parse(data);try{window.__AVATARS=JSON.parse(await dec(k,a));}catch(e){window.__AVATARS={};}

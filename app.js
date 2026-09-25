@@ -21,7 +21,7 @@ function matchScore(r){const why=[];let s=0;const y=(r.platforms||{}).youtube||{
   if(CRYPTO.test(txt)){s+=30;why.push("crypto or prediction market audience");}else if(/futures|nasdaq|\bnq\b|\bes\b/i.test(txt)){s+=8;why.push("futures audience");}
   if(r.promoter){s+=20;why.push("already runs affiliate codes");}
   if((r.firmCount||0)>=2){s+=10;why.push("works with "+r.firmCount+" firms");}
-  const a=r.maxAudience||0;if(a>0){const rs=Math.min(20,Math.round(Math.log10(a+1)*3.4));s+=rs;why.push(fmt(a)+" audience");}
+  const a=r.maxAudience||0;if(a>0){const rs=Math.min(20,Math.round(Math.log10(a+1)*3.4));s+=rs;const af=a>=1e6?(a/1e6).toFixed(1)+"M":a>=1e3?Math.round(a/1e3)+"K":String(a);why.push(af+" audience");}
   if(y.viewRate!=null){if(y.viewRate>=.3){s+=10;why.push("very high view rate");}else if(y.viewRate>=.1){s+=6;why.push("high view rate");}else if(y.viewRate>=.03){s+=3;}}
   if((y.uploadsPerMonth||0)>=4){s+=5;why.push("posts weekly or more");}
   const d=daysSince(y.lastUpload);if(d!=null&&d<=30){s+=5;why.push("active this month");}
