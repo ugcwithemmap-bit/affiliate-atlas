@@ -162,7 +162,7 @@ td .handle{color:var(--muted);font-size:12px;font-family:var(--mono)}
 body.locked > :not(.gate){visibility:hidden}
 </style>
 
-<div class="gate" id="gate"><form id="gateform" autocomplete="off"><h1>Propr Affiliate Atlas</h1><p>Enter the access code to open the atlas.</p><input id="code" type="password" inputmode="numeric" placeholder="••••" aria-label="Access code" autofocus><button type="submit" id="go">Open</button><div class="err" id="err"></div></form></div>
+<div class="gate" id="gate"><form id="gateform" autocomplete="off"><h1>Affiliate Atlas</h1><p>Enter the access code to open the atlas.</p><input id="code" type="password" inputmode="numeric" placeholder="••••" aria-label="Access code" autofocus><button type="submit" id="go">Open</button><div class="err" id="err"></div></form></div>
 <header class="top">
   <div>
     <h1>Affiliate Atlas</h1>
@@ -225,7 +225,7 @@ body.locked > :not(.gate){visibility:hidden}
 
 <script>
 document.body.classList.add("locked");
-const SALT=new Uint8Array([155,14,23,122,179,146,173,74,132,24,142,150,190,167,233,107]);
+const SALT=new Uint8Array([241,2,3,117,175,10,78,77,159,157,65,224,169,149,128,80]);
 async function derive(code){const km=await crypto.subtle.importKey("raw",new TextEncoder().encode(code),"PBKDF2",false,["deriveKey"]);return crypto.subtle.deriveKey({name:"PBKDF2",salt:SALT,iterations:300000,hash:"SHA-256"},km,{name:"AES-GCM",length:256},true,["decrypt"]);}
 async function dec(k,buf){const u=new Uint8Array(buf);const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:u.slice(0,12)},k,u.slice(12));const ds=new Blob([pt]).stream().pipeThrough(new DecompressionStream("gzip"));return await new Response(ds).text();}
 async function open(k){const btn=document.getElementById("go");btn.textContent="Opening…";const [d,a]=await Promise.all([fetch("data.enc").then(r=>r.arrayBuffer()),fetch("avatars.enc").then(r=>r.arrayBuffer())]);let data;try{data=await dec(k,d);}catch(e){throw new Error("bad code");}window.__DATA=JSON.parse(data);try{window.__AVATARS=JSON.parse(await dec(k,a));}catch(e){window.__AVATARS={};}
