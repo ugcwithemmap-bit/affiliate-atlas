@@ -14,9 +14,24 @@ const STATUSES=[["","Not contacted"],["shortlist","Shortlist"],["contacted","Con
 const TYPES=[["creator","Creator"],["discord","Discord server"],["telegram","Telegram channel"],["reddit","Reddit poster"],["site","Site"]];
 let limit=150;
 const PLATS=[["youtube","YT"],["instagram","IG"],["x","X"],["discord","DC"],["telegram","TG"],["tiktok","TT"],["reddit","RD"]];
-const VIEWS=[["promoters","Carries a code",r=>r.promoter],["enriched","Has reach stats",r=>r.enriched],["all","Everyone found",()=>true],["propr","Already promoting Propr",r=>r.firms.some(f=>f.firm==="Propr")],["multi","Works with 3+ firms",r=>r.firmCount>=3],["recruits","Recruit candidates",r=>r.recruit],["export","From channel exports",r=>r.source==="export"]];
+const CRYPTO=/hyperliquid|polymarket|\bcrypto|perps?\b|perpetual|breakout|hyrotrader|crypto fund trader|bitfunded|hypernova|carrot funding|solana|bitcoin|\bbtc\b|\beth\b|altcoin|defi|on-?chain|web3|kalshi|prediction market/i;
+function daysSince(s){if(!s)return null;s=String(s).toLowerCase();let m;if((m=s.match(/(\d+)\s*(hour|day|week|month|year)/)))return +m[1]*({hour:0.04,day:1,week:7,month:30,year:365}[m[2]]);if(/^\d{4}-\d{2}-\d{2}/.test(s))return (Date.now()-Date.parse(s))/864e5;return null;}
+function matchScore(r){const why=[];let s=0;const y=(r.platforms||{}).youtube||{};const txt=[r.name,r.description,...(r.mentionedFirms||[]),...(r.searchFirms||[]),...(r.firms||[]).map(f=>f.firm)].join(" ");
+  const onPropr=(r.firms||[]).some(f=>f.firm==="Propr")||(r.mentionedFirms||[]).includes("Propr");
+  if(CRYPTO.test(txt)){s+=30;why.push("crypto or prediction market audience");}else if(/futures|nasdaq|\bnq\b|\bes\b/i.test(txt)){s+=8;why.push("futures audience");}
+  if(r.promoter){s+=20;why.push("already runs affiliate codes");}
+  if((r.firmCount||0)>=2){s+=10;why.push("works with "+r.firmCount+" firms");}
+  const a=r.maxAudience||0;if(a>0){const rs=Math.min(20,Math.round(Math.log10(a+1)*3.4));s+=rs;why.push(fmt(a)+" audience");}
+  if(y.viewRate!=null){if(y.viewRate>=.3){s+=10;why.push("very high view rate");}else if(y.viewRate>=.1){s+=6;why.push("high view rate");}else if(y.viewRate>=.03){s+=3;}}
+  if((y.uploadsPerMonth||0)>=4){s+=5;why.push("posts weekly or more");}
+  const d=daysSince(y.lastUpload);if(d!=null&&d<=30){s+=5;why.push("active this month");}
+  if(r.recruit){s+=10;why.push("hand picked recruit");}
+  if(r.type==="site"){s-=10;}
+  return {score:Math.max(0,Math.min(100,s)),why,onPropr};}
+DATA.forEach(r=>{const m=matchScore(r);r.match=m.score;r.matchWhy=m.why;r.onPropr=m.onPropr;});
+const VIEWS=[["matches","Potential matches for Propr",r=>!r.onPropr&&r.match>=45],["promoters","Carries a code",r=>r.promoter],["enriched","Has reach stats",r=>r.enriched],["all","Everyone found",()=>true],["propr","Already promoting Propr",r=>r.firms.some(f=>f.firm==="Propr")],["multi","Works with 3+ firms",r=>r.firmCount>=3],["recruits","Recruit candidates",r=>r.recruit],["export","From channel exports",r=>r.source==="export"]];
 
-const state={view:"all",q:"",firms:new Set(),plats:new Set(),types:new Set(),minsubs:0,country:"",status:"",sort:"maxAudience",dir:-1,sel:null};
+const state={view:"matches",q:"",firms:new Set(),plats:new Set(),types:new Set(),minsubs:0,country:"",status:"",sort:"match",dir:-1,sel:null};
 const outreach={};let db=null,dbReady=false,dbWritable=true,downloads=null;
 
 const fmt=n=>n==null?"":n>=1e6?(n/1e6).toFixed(n>=1e7?0:1)+"M":n>=1e3?(n/1e3).toFixed(n>=1e5?0:1)+"K":String(Math.round(n));
@@ -38,7 +53,7 @@ function filtered(){
     return true;
   }).sort((a,b)=>{const k=state.sort;let x=val(a,k),y=val(b,k);if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return -1;if(typeof x==="string")return x.localeCompare(y)*state.dir;return (x-y)*state.dir;});
 }
-function val(r,k){switch(k){case"name":return r.name.toLowerCase();case"subs":return yt(r).subs??null;case"aud":return r.maxAudience||null;case"avg":return yt(r).avgViews??null;case"rate":return yt(r).viewRate??null;case"upl":return yt(r).uploadsPerMonth??null;case"firms":return r.firmCount;case"country":return r.country||null;case"status":return (outreach[r.id]||{}).status||"";default:return r.maxAudience||null;}}
+function val(r,k){switch(k){case"match":return r.match||0;case"name":return r.name.toLowerCase();case"subs":return yt(r).subs??null;case"aud":return r.maxAudience||null;case"avg":return yt(r).avgViews??null;case"rate":return yt(r).viewRate??null;case"upl":return yt(r).uploadsPerMonth??null;case"firms":return r.firmCount;case"country":return r.country||null;case"status":return (outreach[r.id]||{}).status||"";default:return r.maxAudience||null;}}
 
 function renderStats(){
   const enr=DATA.filter(r=>r.enriched).length;const prom=DATA.filter(r=>r.promoter).length,propr=DATA.filter(r=>r.firms.some(f=>f.firm==="Propr")).length,firms=new Set(DATA.flatMap(r=>r.firms.map(f=>f.firm))).size,shortl=Object.values(outreach).filter(o=>o.status&&o.status!=="nofit"&&o.status!=="declined").length;
@@ -62,13 +77,13 @@ function avatar(r){const src=AV[r.id];if(src)return `<img class="av" src="${src}
 function primaryUrl(r){const p=r.platforms;const o=["youtube","discord","telegram","instagram","x","tiktok","web","reddit"];for(const k of o){if(p[k]&&p[k].url)return p[k].url;}return "";}
 function statusHtml(id){const s=(outreach[id]||{}).status||"";const l=(STATUSES.find(x=>x[0]===s)||STATUSES[0])[1];return `<span class="status"><i class="dot ${s}"></i>${s?l:"<span style='color:var(--faint)'>Not contacted</span>"}</span>`;}
 function renderTable(rows){
-  const cols=[["name","Creator"],["link","Channel"],["plats","Where"],["aud","Audience","r"],["avg","Avg views / video","r"],["rate","View rate","r"],["upl","Uploads / mo","r"],["firms","Works with"],["country","Country"],["status","Your status"]];
+  const cols=[...(state.view==="matches"?[["match","Match"]]:[]),["name","Creator"],["link","Channel"],["plats","Where"],["aud","Audience","r"],["avg","Avg views / video","r"],["rate","View rate","r"],["upl","Uploads / mo","r"],["firms","Works with"],["country","Country"],["status","Your status"]];
   const head=cols.map(([k,l,a])=>`<th class="${a||""}" data-k="${k}" ${state.sort===k?`aria-sort="${state.dir<0?"descending":"ascending"}"`:""}>${l}</th>`).join("");
   
   const shown=rows.slice(0,limit);
   const body=shown.map(r=>{const y=yt(r);const rate=y.viewRate;const w=rate?Math.round(Math.min(rate,1)*56):0;
     const chips=r.firms.slice(0,3).map(f=>`<span class="tag ${f.firm==="Propr"?"propr":"code"}">${esc(f.firm)}</span>`).join("")+r.mentionedFirms.filter(m=>!r.firms.some(f=>f.firm===m)).slice(0,2).map(m=>`<span class="tag mention">${esc(m)}</span>`).join("")+(r.firmCount>5?`<span class="tag mention">+${r.firmCount-5}</span>`:"")+(!r.firmCount&&r.searchFirms&&r.searchFirms.length?r.searchFirms.slice(0,2).map(m=>`<span class="tag via" title="Found by searching for this firm">${esc(m)}</span>`).join("")+(r.searchFirms.length>2?`<span class="tag via">+${r.searchFirms.length-2}</span>`:""):"");
-    const pu=primaryUrl(r);return `<tr class="row" data-id="${esc(r.id)}" aria-selected="${state.sel===r.id}"><td><div class="who">${avatar(r)}<div><div class="name">${esc(r.name)}${r.recruit?'<span class="tag propr">recruit</span>':""}</div>${y.handle?`<div class="handle">@${esc(y.handle)}</div>`:""}</div></div></td>
+    const pu=primaryUrl(r);const mcell=state.view==="matches"?`<td><div class="mscore"><b>${r.match}</b><span class="mbar"><i style="width:${r.match}%"></i></span></div><div class="mwhy">${(r.matchWhy||[]).slice(0,3).map(esc).join(" · ")}</div></td>`:"";return `<tr class="row" data-id="${esc(r.id)}" aria-selected="${state.sel===r.id}">${mcell}<td><div class="who">${avatar(r)}<div><div class="name">${esc(r.name)}${r.recruit?'<span class="tag propr">recruit</span>':""}</div>${y.handle?`<div class="handle">@${esc(y.handle)}</div>`:""}</div></div></td>
     <td class="chan">${pu?`<a class="ext" href="${esc(pu)}" target="_blank" rel="noopener">${esc(pu.replace(/^https?:\/\/(www\.)?/,"").slice(0,42))}</a>`:'<span style="color:var(--faint)">no link</span>'}</td>
     <td><div class="plats">${PLATS.map(([p,l])=>{const v=r.platforms[p];return v?`<span class="pl on ${p==="youtube"?"yt":""}" title="${l}${v.handle?" @"+esc(v.handle):""}">${v.url?`<a class="ext" href="${esc(v.url)}" target="_blank" rel="noopener">${l}</a>`:l}</span>`:`<span class="pl" title="${l}">${l}</span>`;}).join("")}</div></td>
     <td class="r num">${fmt(r.maxAudience)||'<span style="color:var(--faint)" title="Not enriched yet">?</span>'}${audLabel(r)}</td><td class="r num">${fmt(y.avgViews)||(y.foundMaxViews?`<span style="color:var(--faint)" title="Top video found in the crawl; channel not enriched yet">${fmt(y.foundMaxViews)} top</span>`:"")}</td>
@@ -76,7 +91,8 @@ function renderTable(rows){
     <td class="r num">${y.uploadsPerMonth!=null?y.uploadsPerMonth.toFixed(1):""}</td>
     <td>${chips||'<span style="color:var(--faint)">none named</span>'}</td><td>${esc(r.country)}</td><td>${statusHtml(r.id)}</td></tr>`;}).join("");
   const more=rows.length>limit?`<div style="padding:12px;text-align:center"><button class="btn" id="more">Show ${Math.min(150,rows.length-limit)} more of ${rows.length-limit} remaining</button></div>`:"";
-  document.getElementById("view").innerHTML=rows.length?`<div class="tablewrap"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>${more}</div>`:`<div class="empty">Nothing matches these filters. Clear one and try again.</div>`;
+  const intro=state.view==="matches"?`<div class="mintro"><b>How the match score works.</b> Crypto or prediction market audience 30, already runs affiliate codes 20, works with several firms 10, reach up to 20 on a log scale, view rate up to 10, posts weekly 5, active this month 5, hand picked recruit 10. Anyone already promoting Propr is left out. Scores are a shortlist, not a verdict: open the profile before you reach out.</div>`:"";
+  document.getElementById("view").innerHTML=rows.length?intro+`<div class="tablewrap"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>${more}</div>`:`<div class="empty">Nothing matches these filters. Clear one and try again.</div>`;
 }
 function renderFirms(rows){
   const m={};rows.forEach(r=>r.firms.forEach(f=>{(m[f.firm]=m[f.firm]||[]).push({r,f});}));
@@ -117,6 +133,7 @@ function openDrawer(id){
   document.getElementById("drawer").innerHTML=`<div class="dhead"><div style="display:flex;gap:12px;align-items:center">${avatar(r).replace('class="av','class="av" style="width:48px;height:48px;font-size:16px" data-x="')}<div><h2>${esc(r.name)}</h2><div class="where">${[r.country,(TYPES.find(x=>x[0]===(r.type||"creator"))||[])[1],r.recruit?"Recruit candidate":r.promoter?"Carries a prop firm code":"No code found yet",r.email?"email on file":"",...(r.sources||[])].filter(Boolean).join(" · ")}</div></div></div><button class="close" id="close" aria-label="Close">×</button></div>
   <div class="dbody">
     <div><h4>Where they are</h4><div class="links">${links||'<span class="note">No links recorded yet.</span>'}${r.email?`<a href="mailto:${esc(r.email)}"><b>@</b>${esc(r.email)}</a>`:""}</div></div>
+    ${r.match!=null&&!r.onPropr?`<div><h4>Propr match</h4><div class="mscore"><b>${r.match}</b><span class="mbar"><i style="width:${r.match}%"></i></span><span style="font-size:12px;color:var(--muted)">out of 100</span></div><p class="note" style="margin-top:6px">${(r.matchWhy||[]).length?esc(r.matchWhy.join(", ")):"No strong signals yet."}</p></div>`:""}
     <div><h4>Reach</h4>${otherTiles}${tiles}</div>
     ${r.recruit?`<div><h4>Why they fit Propr</h4><p style="margin:0">${esc(r.fit)}${r.evidence?` <a href="${esc(r.evidence)}" target="_blank" rel="noopener">evidence</a>`:""}</p></div>`:""}
     <div><h4>Prop firm relationships</h4>${rels||'<p class="note" style="margin:0">No confirmed affiliate relationship found in the sweep.</p>'}${mentions.length?`<p class="note">Also mentions ${mentions.map(esc).join(", ")} in bio or descriptions.</p>`:""}</div>
@@ -146,7 +163,7 @@ document.addEventListener("click",e=>{
   if(t.matches("a.ext"))return;
   if(t.id==="widen"){e.preventDefault();state.view="all";limit=150;render();return;}
   if(!t.matches("tr.row,a[data-id],#more,th"))limit=150;
-  if(t.dataset.v){state.view=t.dataset.v;render();}
+  if(t.dataset.v){state.view=t.dataset.v;if(state.view==="matches"){state.sort="match";state.dir=-1;}else if(state.sort==="match"){state.sort="maxAudience";state.dir=-1;}render();}
   else if(t.dataset.f){state.firms.has(t.dataset.f)?state.firms.delete(t.dataset.f):state.firms.add(t.dataset.f);render();}
   else if(t.dataset.p){state.plats.has(t.dataset.p)?state.plats.delete(t.dataset.p):state.plats.add(t.dataset.p);render();}
   else if(t.dataset.t){state.types.has(t.dataset.t)?state.types.delete(t.dataset.t):state.types.add(t.dataset.t);render();}
