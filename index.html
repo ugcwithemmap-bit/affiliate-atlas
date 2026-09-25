@@ -225,11 +225,11 @@ body.locked > :not(.gate){visibility:hidden}
 
 <script>
 document.body.classList.add("locked");
-const SALT=new Uint8Array([150,82,105,202,71,98,132,108,100,26,117,186,74,30,193,169]);
+const SALT=new Uint8Array([155,14,23,122,179,146,173,74,132,24,142,150,190,167,233,107]);
 async function derive(code){const km=await crypto.subtle.importKey("raw",new TextEncoder().encode(code),"PBKDF2",false,["deriveKey"]);return crypto.subtle.deriveKey({name:"PBKDF2",salt:SALT,iterations:300000,hash:"SHA-256"},km,{name:"AES-GCM",length:256},true,["decrypt"]);}
 async function dec(k,buf){const u=new Uint8Array(buf);const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:u.slice(0,12)},k,u.slice(12));const ds=new Blob([pt]).stream().pipeThrough(new DecompressionStream("gzip"));return await new Response(ds).text();}
 async function open(k){const btn=document.getElementById("go");btn.textContent="Opening…";const [d,a]=await Promise.all([fetch("data.enc").then(r=>r.arrayBuffer()),fetch("avatars.enc").then(r=>r.arrayBuffer())]);let data;try{data=await dec(k,d);}catch(e){throw new Error("bad code");}window.__DATA=JSON.parse(data);try{window.__AVATARS=JSON.parse(await dec(k,a));}catch(e){window.__AVATARS={};}
-const s=document.createElement("script");s.src="app.js";s.onload=()=>{document.body.classList.remove("locked");document.getElementById("gate").remove();};document.body.appendChild(s);}
+const s=document.createElement("script");s.src="app.js";s.charset="utf-8";s.onload=()=>{document.body.classList.remove("locked");document.getElementById("gate").remove();};document.body.appendChild(s);}
 async function submitGate(e){if(e)e.preventDefault();const err=document.getElementById("err");err.textContent="";const code=document.getElementById("code").value.trim();if(!code)return;try{const k=await derive(code);await open(k);try{sessionStorage.setItem("atlas-k",JSON.stringify(Array.from(new Uint8Array(await crypto.subtle.exportKey("raw",k)))));}catch(_){}}catch(ex){err.textContent="That code did not open the atlas.";document.getElementById("go").textContent="Open";}}
 document.getElementById("gateform").addEventListener("submit",submitGate);document.getElementById("go").addEventListener("click",submitGate);document.getElementById("code").addEventListener("keydown",e=>{if(e.key==="Enter")submitGate(e);});
 (async()=>{try{const raw=sessionStorage.getItem("atlas-k");if(!raw)return;const k=await crypto.subtle.importKey("raw",new Uint8Array(JSON.parse(raw)),"AES-GCM",true,["decrypt"]);await open(k);}catch(e){}})();
