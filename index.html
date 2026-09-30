@@ -50,11 +50,16 @@ button{font:inherit;color:inherit}
 .tab[aria-selected="true"]{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
 .tab .num{color:var(--muted)}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{padding:4px 9px;border-radius:999px;border:1px solid var(--line-2);background:transparent;font-size:12px;cursor:pointer;color:var(--ink);line-height:1.3}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;border:1px solid var(--line-2);background:transparent;font-size:12px;cursor:pointer;color:var(--ink);line-height:1.3}
 .chip:hover{border-color:var(--accent)}
 .chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
 :root[data-theme="dark"] .chip[aria-pressed="true"],.dark-chip{color:#0F1514}
-.chip small{opacity:.7;margin-left:4px;font-variant-numeric:tabular-nums}
+.chip small{opacity:.7;margin-left:2px;font-variant-numeric:tabular-nums}
+.chip svg{width:14px;height:14px;display:block;flex:none}
+.pl svg{width:15px;height:15px;display:block}
+.pl a{display:block;line-height:0}
+.pl.on{color:var(--ink);border-color:var(--line)}
+.pl:not(.on) svg{opacity:.2;filter:grayscale(1)}
 select.ctl,input.ctl{padding:7px 9px;border:1px solid var(--line-2);border-radius:7px;background:var(--ground);color:var(--ink);font:inherit;width:100%}
 .rail .row{display:flex;gap:8px}
 .reset{border:0;background:none;color:var(--muted);cursor:pointer;padding:0;font-size:12px;text-decoration:underline;align-self:flex-start}
@@ -92,7 +97,8 @@ td .handle{color:var(--muted);font-size:12px;font-family:var(--mono)}
 .chan a{font-family:var(--mono);font-size:11.5px;color:var(--accent-ink);white-space:nowrap}
 .mscore{display:flex;align-items:center;gap:8px}.mscore b{font-family:var(--display);font-size:18px;font-variant-numeric:tabular-nums;min-width:28px}
 .mbar{width:70px;height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden;display:inline-block}.mbar i{display:block;height:100%;background:var(--propr)}
-.mwhy{font-size:11.5px;color:var(--muted);margin-top:3px;max-width:260px}
+.mwhy{font-size:11px;color:var(--muted);margin-top:3px;max-width:118px;line-height:1.35;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+th.mcol,td.mcol{width:126px;min-width:126px}
 .ctable td{vertical-align:top}.ctitle a{font-weight:600;color:var(--ink)}.ctitle a:hover{color:var(--accent-ink)}.csub{font-size:11.5px;color:var(--muted);margin-top:2px}
 .hook{display:inline-block;padding:1px 6px;border-radius:4px;font-size:11px;background:var(--propr-soft);color:var(--propr);margin:1px 3px 1px 0}
 .cfilters{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}.cfilters .chip[aria-pressed="true"]{background:var(--propr);border-color:var(--propr);color:#fff}
@@ -183,6 +189,10 @@ body.locked > :not(.gate){visibility:hidden}
       <div class="sec-h"><div class="eyebrow">View</div><button class="tog" aria-label="Collapse">hide</button></div>
       <div class="tabs" id="tabs" role="tablist"></div>
     </section>
+    <section data-sec="plats">
+      <div class="sec-h"><div class="eyebrow">Channel</div><button class="tog" aria-label="Collapse">hide</button></div>
+      <div class="chips" id="platchips"></div>
+    </section>
     <section data-sec="niche">
       <div class="sec-h"><div class="eyebrow">Niche</div><button class="tog" aria-label="Collapse">hide</button></div>
       <div class="chips" id="nichechips"></div>
@@ -194,10 +204,6 @@ body.locked > :not(.gate){visibility:hidden}
     <section data-sec="firms">
       <div class="sec-h"><div class="eyebrow">Works with</div><button class="tog" aria-label="Collapse">hide</button></div>
       <div class="chips" id="firmchips"></div>
-    </section>
-    <section data-sec="plats">
-      <div class="sec-h"><div class="eyebrow">Has a presence on</div><button class="tog" aria-label="Collapse">hide</button></div>
-      <div class="chips" id="platchips"></div>
     </section>
     <section data-sec="place">
       <div class="sec-h"><div class="eyebrow">Audience and place</div><button class="tog" aria-label="Collapse">hide</button></div>
