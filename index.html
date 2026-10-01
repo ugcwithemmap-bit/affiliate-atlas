@@ -88,7 +88,8 @@ tr.row{cursor:pointer}
 tr.row:hover td{background:var(--surface-2)}
 tr.row[aria-selected="true"] td{background:var(--accent-soft)}
 td .name{font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-td .handle{color:var(--muted);font-size:12px;font-family:var(--mono)}
+td .handle{color:var(--muted);font-size:12px;font-family:var(--mono);word-break:break-all;max-width:240px}
+td .name{max-width:360px}td .name>span:first-child{word-break:break-word}
 .who{display:flex;align-items:center;gap:10px}
 .av{width:36px;height:36px;border-radius:50%;flex:none;object-fit:cover;background:var(--surface-2);border:1px solid var(--line)}
 .av.init{display:grid;place-items:center;font-family:var(--display);font-weight:600;font-size:13px;color:var(--muted)}
