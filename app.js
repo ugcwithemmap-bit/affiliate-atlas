@@ -64,9 +64,9 @@ const yt=r=>r.platforms.youtube||{};
 const firmsOf=r=>[...new Set([...r.firms.map(f=>f.firm),...r.mentionedFirms])];
 
 function filtered(){
-  const v=VIEWS.find(v=>v[0]===state.view)[2];const q=state.q.toLowerCase();
+  const v=VIEWS.find(v=>v[0]===state.view)[2];const q=state.q.toLowerCase().trim().replace(/^@/,"").replace(/^(https?:\/\/)?(www\.)?(x|twitter|instagram|youtube|tiktok|t)\.(com|me)\//,"").replace(/^@/,"");
   return DATA.filter(r=>{
-    if(!v(r))return false;
+    if(!q&&!v(r))return false;
     if(state.firms.size&&![...firmsOf(r),...(r.searchFirms||[])].some(f=>state.firms.has(f)))return false;
     if(state.plats.size&&![...state.plats].every(p=>r.platforms[p]))return false;
     if(state.types.size&&!state.types.has(r.type||"creator"))return false;
@@ -74,7 +74,7 @@ function filtered(){
     if(state.minsubs&&(r.maxAudience||0)<state.minsubs)return false;
     if(state.country&&r.country!==state.country)return false;
     if(state.status&&((outreach[r.id]||{}).status||"")!==state.status)return false;
-    if(q){const hay=[r.name,r.country,...Object.values(r.platforms).map(p=>p.handle||""),...firmsOf(r),...r.firms.map(f=>f.code||""),...(r.linkCodes||[])].join(" ").toLowerCase();if(!hay.includes(q))return false;}
+    if(q){const hay=[r.name,r.country,...Object.values(r.platforms).map(p=>(p.handle||"")+" "+(p.url||"")),...firmsOf(r),...r.firms.map(f=>f.code||""),...(r.linkCodes||[])].join(" ").toLowerCase();if(!hay.includes(q))return false;}
     return true;
   }).sort((a,b)=>{const k=state.sort;let x=val(a,k),y=val(b,k);if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return -1;if(typeof x==="string")return x.localeCompare(y)*state.dir;return (x-y)*state.dir;});
 }
@@ -140,7 +140,7 @@ function renderContent(){const rows=CONTENT.filter(c=>(!cstate.niche||c.niche===
  document.getElementById("count").innerHTML=`Top ${top.length} of ${rows.length} stitchable videos. <a href="#" id="cexport">Export this list as CSV</a>`;
  document.getElementById("view").innerHTML=intro+chips+`<div class="tablewrap"><table class="ctable"><thead>${head}</thead><tbody>${body}</tbody></table>${more}</div>`;}
 function render(){if(state.view==="content"){renderStats();renderRail();renderContent();return;}renderStats();renderRail();const rows=filtered();const narrowed=state.view!=="all"&&(state.plats.size||state.types.size||state.firms.size);let hint="";if(narrowed){const v=VIEWS.find(v=>v[0]==="all");const all=DATA.filter(r=>{if(state.firms.size&&![...firmsOf(r),...(r.searchFirms||[])].some(f=>state.firms.has(f)))return false;if(state.plats.size&&![...state.plats].every(p=>r.platforms[p]))return false;if(state.types.size&&!state.types.has(r.type||"creator"))return false;return true;}).length;if(all>rows.length)hint=` Only the "${VIEWS.find(v=>v[0]===state.view)[1]}" view is shown. <a href="#" id="widen">Show all ${all}</a>.`;}
-document.getElementById("count").innerHTML=`${rows.length} of ${DATA.length} shown.${hint} <a href="#" id="toggle">${firmMode?"Show as a table":"Show by firm"}</a>`;firmMode?renderFirms(rows):renderTable(rows);}
+document.getElementById("count").innerHTML=`${rows.length} of ${DATA.length} shown.${state.q.trim()?" Search looks at the whole atlas, not only this view.":hint} <a href="#" id="toggle">${firmMode?"Show as a table":"Show by firm"}</a>`;firmMode?renderFirms(rows):renderTable(rows);}
 
 function openDrawer(id){
   const r=DATA.find(x=>x.id===id);if(!r)return;state.sel=id;const y=yt(r);const o=outreach[id]||{};
